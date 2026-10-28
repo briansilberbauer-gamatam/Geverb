@@ -22,7 +22,7 @@ Then read its companion reference files using the `read` tool as needed:
     - **Main Visualizer**: Large, central obsidian waveform screen embedded under the glass with subtle frequency/dB scale markers and a glowing crimson red real-time audio waveform.
   - **Controls**:
     - **Low-Profile Knobs**: Large, heavy-machined metal primary knobs with fine vertical knurled ridges on the outer rim, recessed low-profile height, subtle crimson LED under-glow, and a tiny minimalist tick mark on the flat brushed cap.
-    - **Low-Profile Sliders (Right-Side Full-Height Mixer Bay)**: Vertical touch-style / ultra-thin mechanical mixer sliders for **`Input`**, **`Wet/Dry Mix`**, and **`Output`** placed in a dedicated **right-side Mixer Bay** that spans the **full interior height of the component**, integrated smoothly into the glass surface with subtly recessed linear tracks and minimalist tick marks alongside them.
+    - **Low-Profile Sliders & Horizontal Output Meter (Right-Side Full-Height Mixer Bay)**: Vertical touch-style / ultra-thin mechanical mixer sliders for **`Input`**, **`Wet/Dry Mix`**, and **`Output`** placed in a dedicated **right-side Mixer Bay** that spans the **full interior height of the component**, integrated smoothly into the glass surface with subtly recessed linear tracks and minimalist tick marks alongside them, with a dedicated **horizontal Output level meter (`OUT METER`) positioned vertically below the mixers** displaying real-time Output level in glowing crimson.
     - **Tactile Buttons**: Rectangular, low-profile tactile buttons (`"Bypass"`, `"Filter"`, `"Comp"`, `"Limiter"`) with crisp sans-serif typography, outlined by a thin, understated red glowing border when active.
 
 ---

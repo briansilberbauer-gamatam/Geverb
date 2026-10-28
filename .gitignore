@@ -1,0 +1,17 @@
+build/
+build-*/
+dist/
+external/
+external
+deps/
+deps
+stage/
+stage-*/
+*.zip
+*.sha256
+*.png
+.DS_Store
+compile_commands.json
+
+!docs/
+!docs/geverb-ui.png

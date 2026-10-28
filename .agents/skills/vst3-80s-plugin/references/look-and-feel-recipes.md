@@ -461,11 +461,11 @@ void StudioLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int w
 
 ---
 
-## 5. Low-Profile Vertical Touch / Ultra-Thin Mechanical Sliders & Right-Side Full-Height Mixer Bay (`drawLinearSlider` + `drawRightSideMixerBay`)
+## 5. Low-Profile Vertical Touch / Ultra-Thin Mechanical Sliders, Horizontal Output Meter & Right-Side Full-Height Mixer Bay (`drawLinearSlider` + `drawRightSideMixerBay` + `drawHorizontalOutputMeter`)
 
-The three mixer sliders for **`Input`** (`dB`), **`Wet/Dry Mix`** (`%`), and **`Output`** (`dB`) **must** be placed on the **right side of the component** and **take the full height** of the interior glass surface.
+The three mixer sliders for **`Input`** (`dB`), **`Wet/Dry Mix`** (`%`), and **`Output`** (`dB`), along with a **Horizontal Output Level Meter positioned vertically below the mixers**, **must** be placed on the **right side of the component** inside the **Right-Side Full-Height Mixer Bay**.
 
-### A. Right-Side Full-Height Mixer Bay Backdrop & Layout (`drawRightSideMixerBay` + `layoutRightSideMixerBay`)
+### A. Right-Side Full-Height Mixer Bay Backdrop, Layout & Horizontal Output Meter Below Mixers (`drawRightSideMixerBay` + `layoutRightSideMixerBay` + `drawHorizontalOutputMeter`)
 
 ```cpp
 // Call inside ContentComponent::paint(g) after drawDesktopHardwareChassis(g, getLocalBounds().toFloat()):
@@ -490,18 +490,28 @@ void drawRightSideMixerBay (juce::Graphics& g, juce::Rectangle<float> mixerBayBo
     g.fillRect (divX + 1.0f, mixerBayBounds.getY() + 12.0f, 1.0f, mixerBayBounds.getHeight() - 24.0f);
 }
 
-// Call inside ContentComponent::resized() FIRST on innerGlass so the mixer bay takes the full height:
+// Call inside ContentComponent::resized() FIRST on innerGlass so the mixer bay takes the full height,
+// with the Horizontal Output Meter carved out vertically BELOW the Input/Mix/Output mixer sliders:
 void layoutRightSideMixerBay (juce::Rectangle<int>& innerGlass,
                               juce::Slider& inputSlider,   juce::Label& inputTitle,  juce::Label& inputValue,
                               juce::Slider& mixSlider,     juce::Label& mixTitle,    juce::Label& mixValue,
                               juce::Slider& outputSlider,  juce::Label& outputTitle, juce::Label& outputValue,
-                              juce::Rectangle<float>& outMixerBayBounds)
+                              juce::Rectangle<float>& outMixerBayBounds,
+                              juce::Rectangle<float>& outHorizontalOutputMeterBounds)
 {
     constexpr int mixerBayWidth = 204;
     auto rightMixerBay = innerGlass.removeFromRight (mixerBayWidth);
     outMixerBayBounds  = rightMixerBay.toFloat();
     innerGlass.removeFromRight (14); // Divider clearance between main workspace and right mixer bay
 
+    // 1. Carve out the Horizontal Output Level Meter vertically BELOW the mixer sliders
+    constexpr int outputMeterHeight = 72;
+    auto meterArea = rightMixerBay.removeFromBottom (outputMeterHeight).reduced (6, 4);
+    outHorizontalOutputMeterBounds = meterArea.toFloat();
+
+    rightMixerBay.removeFromBottom (8); // Vertical separation between mixer sliders and horizontal Output meter
+
+    // 2. Lay out the 3 vertical mixer sliders (Input, Wet/Dry Mix, Output) in the upper section
     juce::Slider* sliders[3] = { &inputSlider, &mixSlider, &outputSlider };
     juce::Label*  titles[3]  = { &inputTitle,  &mixTitle,  &outputTitle };
     juce::Label*  values[3]  = { &inputValue,  &mixValue,  &outputValue };
@@ -512,8 +522,123 @@ void layoutRightSideMixerBay (juce::Rectangle<int>& innerGlass,
         auto col = rightMixerBay.removeFromLeft (i == 2 ? rightMixerBay.getWidth() : colWidth)
                                 .reduced (4, 4);
         titles[i]->setBounds (col.removeFromTop (22));
-        values[i]->setBounds (col.removeFromBottom (24));
-        sliders[i]->setBounds (col); // Vertical slider stretches the full remaining height of the component
+        values[i]->setBounds (col.removeFromBottom (22));
+        sliders[i]->setBounds (col); // Vertical slider occupies the upper mixer bay span above the Output meter
+    }
+}
+
+// Render the Horizontal Output Level Meter vertically below the mixer sliders:
+void drawHorizontalOutputMeter (juce::Graphics& g,
+                                juce::Rectangle<float> bounds,
+                                float outLeftDb,
+                                float outRightDb,
+                                float peakHoldDb)
+{
+    using namespace studio::ui;
+
+    // 1. Recessed obsidian screen well embedded under the glass
+    g.setColour (obsidianScreen);
+    g.fillRoundedRectangle (bounds, 5.0f);
+
+    g.setColour (glassRimHighlight.withAlpha (0.18f));
+    g.drawRoundedRectangle (bounds, 5.0f, 0.8f);
+    g.setColour (crimsonAccent.withAlpha (0.28f));
+    g.drawRoundedRectangle (bounds.reduced (1.0f), 4.2f, 0.6f);
+
+    auto inner = bounds.reduced (8.0f, 5.0f);
+
+    // 2. Top header row: "OUT METER" title on the left, live peak dB readout on the right
+    auto headerRow = inner.removeFromTop (14.0f);
+    g.setColour (textSecondary);
+    g.setFont (font (8.0f, FontWeight::semibold, 0.10f));
+    g.drawText ("OUT METER", headerRow, juce::Justification::centredLeft, false);
+
+    const juce::String peakText = (peakHoldDb <= -59.5f)
+        ? juce::String ("-INF dB")
+        : juce::String (peakHoldDb, 1) + " dB";
+    g.setColour (peakHoldDb > -0.5f ? crimsonBright : textPrimary);
+    g.setFont (font (8.5f, FontWeight::medium, 0.04f));
+    g.drawText (peakText, headerRow, juce::Justification::centredRight, false);
+
+    inner.removeFromTop (3.0f);
+    auto scaleRow = inner.removeFromBottom (11.0f);
+
+    // 3. Horizontal stereo (L / R) meter tracks (-60 dB on left to 0 dB on right)
+    const float labelW   = 11.0f;
+    const float barLeft  = inner.getX() + labelW;
+    const float barRight = inner.getRight() - 2.0f;
+    const float barW     = juce::jmax (20.0f, barRight - barLeft);
+    constexpr float barH = 6.5f;
+    const float midY     = inner.getCentreY();
+
+    const juce::Rectangle<float> leftTrack  (barLeft, midY - barH - 1.5f, barW, barH);
+    const juce::Rectangle<float> rightTrack (barLeft, midY + 1.5f,        barW, barH);
+
+    g.setColour (textMuted);
+    g.setFont (font (7.5f, FontWeight::semibold));
+    g.drawText ("L", juce::Rectangle<float> (inner.getX(), leftTrack.getY() - 1.0f, labelW - 2.0f, barH + 2.0f),
+                juce::Justification::centredLeft, false);
+    g.drawText ("R", juce::Rectangle<float> (inner.getX(), rightTrack.getY() - 1.0f, labelW - 2.0f, barH + 2.0f),
+                juce::Justification::centredLeft, false);
+
+    g.setColour (obsidianWell);
+    g.fillRoundedRectangle (leftTrack, 2.0f);
+    g.fillRoundedRectangle (rightTrack, 2.0f);
+
+    auto dbToNorm = [] (float db) noexcept
+    {
+        return juce::jlimit (0.0f, 1.0f, (db + 60.0f) / 60.0f);
+    };
+
+    // 4. Glowing crimson horizontal L & R level bars filling from left to right
+    auto drawChannelFill = [&] (juce::Rectangle<float> track, float levelDb)
+    {
+        const float norm  = dbToNorm (levelDb);
+        const float fillW = norm * track.getWidth();
+        if (fillW <= 0.5f)
+            return;
+
+        const auto fillRect = track.withWidth (fillW);
+
+        // Soft crimson outer bloom
+        g.setColour (crimsonGlow.withAlpha (0.35f));
+        g.fillRoundedRectangle (fillRect.expanded (0.5f, 1.2f), 2.0f);
+
+        // Horizontal gradient from muted crimson on the left to hot crimson near 0 dB on the right
+        juce::ColourGradient barGrad (crimsonAccent, track.getX(),     fillRect.getCentreY(),
+                                      crimsonBright, track.getRight(), fillRect.getCentreY(), false);
+        g.setGradientFill (barGrad);
+        g.fillRoundedRectangle (fillRect, 1.5f);
+
+        // Crisp right-edge peak hairline
+        g.setColour (crimsonBright);
+        g.fillRect (fillRect.getRight() - 1.5f, fillRect.getY(), 1.5f, fillRect.getHeight());
+    };
+
+    drawChannelFill (leftTrack,  outLeftDb);
+    drawChannelFill (rightTrack, outRightDb);
+
+    // Ballistic peak-hold vertical marker across both L/R tracks
+    if (peakHoldDb > -59.0f)
+    {
+        const float peakX = barLeft + dbToNorm (peakHoldDb) * barW;
+        g.setColour (crimsonBright.withAlpha (0.85f));
+        g.fillRect (peakX - 0.6f, leftTrack.getY(), 1.2f, rightTrack.getBottom() - leftTrack.getY());
+    }
+
+    // 5. Bottom horizontal dB scale ticks & labels (-48, -36, -24, -12, -6, 0)
+    constexpr float tickDbs[] = { -48.0f, -36.0f, -24.0f, -12.0f, -6.0f, 0.0f };
+    g.setFont (font (7.0f, FontWeight::regular));
+    for (float db : tickDbs)
+    {
+        const float x = barLeft + dbToNorm (db) * barW;
+        g.setColour (obsidianGrid.brighter (0.15f));
+        g.fillRect (x - 0.5f, rightTrack.getBottom() + 1.0f, 1.0f, 2.5f);
+
+        g.setColour (textMuted);
+        g.drawText (juce::String (static_cast<int> (db)),
+                    juce::Rectangle<float> (x - 10.0f, scaleRow.getY(), 20.0f, scaleRow.getHeight()),
+                    juce::Justification::centred, false);
     }
 }
 ```
