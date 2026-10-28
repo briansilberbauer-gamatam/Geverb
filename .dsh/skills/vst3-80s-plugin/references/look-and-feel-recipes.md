@@ -461,9 +461,66 @@ void StudioLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int w
 
 ---
 
-## 5. Low-Profile Vertical Touch / Ultra-Thin Mechanical Sliders (`drawLinearSlider`)
+## 5. Low-Profile Vertical Touch / Ultra-Thin Mechanical Sliders & Right-Side Full-Height Mixer Bay (`drawLinearSlider` + `drawRightSideMixerBay`)
 
-Vertical touch-style or ultra-thin mechanical sliders (`"Mix"`, `"Output"`, etc.) integrated smoothly into the glass surface with subtly recessed linear tracks and minimalist tick marks alongside them:
+The three mixer sliders for **`Input`** (`dB`), **`Wet/Dry Mix`** (`%`), and **`Output`** (`dB`) **must** be placed on the **right side of the component** and **take the full height** of the interior glass surface.
+
+### A. Right-Side Full-Height Mixer Bay Backdrop & Layout (`drawRightSideMixerBay` + `layoutRightSideMixerBay`)
+
+```cpp
+// Call inside ContentComponent::paint(g) after drawDesktopHardwareChassis(g, getLocalBounds().toFloat()):
+void drawRightSideMixerBay (juce::Graphics& g, juce::Rectangle<float> mixerBayBounds)
+{
+    using namespace studio::ui;
+
+    // 1. Subtle smoked glass mixer bay recess spanning the full interior height on the right
+    g.setColour (obsidianScreen.withAlpha (0.28f));
+    g.fillRoundedRectangle (mixerBayBounds, 6.0f);
+
+    // 2. Full-height vertical divider hairline on the left edge of the mixer bay
+    const float divX = mixerBayBounds.getX() - 7.0f;
+    g.setColour (obsidianGrid);
+    g.fillRect (divX, mixerBayBounds.getY() + 4.0f, 1.0f, mixerBayBounds.getHeight() - 8.0f);
+
+    // Subtle crimson vertical edge refraction along the mixer divider
+    juce::ColourGradient divGlow (juce::Colours::transparentBlack, divX, mixerBayBounds.getY(),
+                                  juce::Colours::transparentBlack, divX, mixerBayBounds.getBottom(), false);
+    divGlow.addColour (0.5, crimsonAccent.withAlpha (0.32f));
+    g.setGradientFill (divGlow);
+    g.fillRect (divX + 1.0f, mixerBayBounds.getY() + 12.0f, 1.0f, mixerBayBounds.getHeight() - 24.0f);
+}
+
+// Call inside ContentComponent::resized() FIRST on innerGlass so the mixer bay takes the full height:
+void layoutRightSideMixerBay (juce::Rectangle<int>& innerGlass,
+                              juce::Slider& inputSlider,   juce::Label& inputTitle,  juce::Label& inputValue,
+                              juce::Slider& mixSlider,     juce::Label& mixTitle,    juce::Label& mixValue,
+                              juce::Slider& outputSlider,  juce::Label& outputTitle, juce::Label& outputValue,
+                              juce::Rectangle<float>& outMixerBayBounds)
+{
+    constexpr int mixerBayWidth = 204;
+    auto rightMixerBay = innerGlass.removeFromRight (mixerBayWidth);
+    outMixerBayBounds  = rightMixerBay.toFloat();
+    innerGlass.removeFromRight (14); // Divider clearance between main workspace and right mixer bay
+
+    juce::Slider* sliders[3] = { &inputSlider, &mixSlider, &outputSlider };
+    juce::Label*  titles[3]  = { &inputTitle,  &mixTitle,  &outputTitle };
+    juce::Label*  values[3]  = { &inputValue,  &mixValue,  &outputValue };
+
+    const int colWidth = rightMixerBay.getWidth() / 3;
+    for (int i = 0; i < 3; ++i)
+    {
+        auto col = rightMixerBay.removeFromLeft (i == 2 ? rightMixerBay.getWidth() : colWidth)
+                                .reduced (4, 4);
+        titles[i]->setBounds (col.removeFromTop (22));
+        values[i]->setBounds (col.removeFromBottom (24));
+        sliders[i]->setBounds (col); // Vertical slider stretches the full remaining height of the component
+    }
+}
+```
+
+### B. Ultra-Thin Recessed Vertical Glass Slider Rendering (`drawLinearSlider`)
+
+Vertical touch-style or ultra-thin mechanical sliders (`"Input"`, `"Mix"`, `"Output"`) integrated smoothly into the right-side full-height glass mixer bay with subtly recessed linear tracks and minimalist tick marks alongside them:
 
 ```cpp
 void StudioLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int width, int height,
@@ -483,8 +540,8 @@ void StudioLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int w
     const float trackH   = juce::jmax (10.0f, trackBot - trackTop);
     const float clampedY = juce::jlimit (trackTop, trackBot, sliderPos);
 
-    // 1. Minimalist horizontal tick marks alongside both sides of the recessed track
-    constexpr int numTicks = 11;
+    // 1. Minimalist horizontal tick marks alongside both sides of the full-height recessed track
+    constexpr int numTicks = 21;
     for (int i = 0; i < numTicks; ++i)
     {
         const float prop  = static_cast<float> (i) / static_cast<float> (numTicks - 1);
@@ -517,7 +574,7 @@ void StudioLookAndFeel::drawLinearSlider (juce::Graphics& g, int x, int y, int w
     }
 
     // 4. Low-profile flush touch / mechanical slider cap
-    const juce::Rectangle<float> thumb (centerX - 11.0f, clampedY - 4.5f, 22.0f, 9.0f);
+    const juce::Rectangle<float> thumb (centerX - 12.0f, clampedY - 4.5f, 24.0f, 9.0f);
     g.setColour (dropShadowDeep.withAlpha (0.55f));
     g.fillRoundedRectangle (thumb.translated (0.8f, 1.4f), 2.0f);
 

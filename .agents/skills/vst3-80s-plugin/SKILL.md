@@ -5,8 +5,9 @@ description: >-
   GitHub Actions CI/release pipelines (Windows, Linux, macOS Universal), DeepSeek
   Harness (dsh) Flash & Pro orchestration, and Futuristic Studio Hardware Look &
   Feel (brushed gunmetal chassis, flush transparent glass overlay with crimson
-  LED edge-glow, low-profile knurled metal knobs, ultra-thin glass sliders, and
-  central glowing red waveform visualizer).
+  LED edge-glow, low-profile knurled metal knobs, right-side full-height
+  Input/Mix/Output glass mixer sliders, and central glowing red waveform
+  visualizer).
 user-invocable: true
 ---
 
@@ -53,7 +54,8 @@ Whether switching models manually in the harness or orchestrating child agents v
      - Flush transparent glass overlay with subtle crimson LED edge-glow/refraction (`#C82230`) and upper-left soft-box specular highlights.
      - Top-center pill-shaped digital preset readout framed by minimalist `<` `>` chevrons.
      - Central obsidian screen with a glowing red real-time audio waveform and subtle frequency/dB scale markers.
-     - Low-profile heavy-machined knurled metal knobs with tiny cap tick marks and subtle crimson LED under-glow, ultra-thin recessed vertical glass sliders, and rectangular tactile buttons outlined by a thin red glowing border when active.
+     - Low-profile heavy-machined knurled metal knobs with tiny cap tick marks and subtle crimson LED under-glow, and rectangular tactile buttons outlined by a thin red glowing border when active.
+     - **Right-Side Full-Height Mixer Bay**: Vertical ultra-thin recessed glass sliders for **`Input`**, **`Wet/Dry Mix`**, and **`Output`** positioned on the **right side of the component** and spanning the **full interior height** of the glass panel.
      - Zero text truncation or overlapping controls.
    - Call **`present`** on the PNG file path and embed `![MidSide-670 UI Preview](<dist/midside670-ui.png>)` in the final response so the user sees the rendered UI card in the DeepSeek Harness Web UI.
 
@@ -221,11 +223,19 @@ namespace studio::ui
   4. **Tiny Minimalist Tick Mark**:
      - Near the outer perimeter of the flat cap (`radius * 0.56f` to `radius * 0.70f`), draw a **tiny, surgical minimalist tick mark** (`1.6f` wide) in crisp `textPrimary` (`#ECEFF4`) or `crimsonBright`. Never draw bulky plastic wedges.
 
-#### E. Low-Profile Vertical Touch / Ultra-Thin Mechanical Sliders (`drawLinearSlider`)
-- **Design**: Vertical touch-style or ultra-thin mechanical sliders (e.g., `"Mix"`, `"Output"`, `"Mid Gain"`, `"Side Gain"`) integrated smoothly into the glass surface:
-  - **Recessed Linear Track**: A narrow (`4px` wide) vertical recessed slot (`obsidianWell`) with a `1px` glass edge highlight and a subtle muted crimson active fill (`crimsonAccent`) rising from the bottom (or center for bipolar trims) to the thumb position.
-  - **Minimalist Tick Marks**: Hairline horizontal tick marks (`6px` wide, `1px` thick in `textMuted.withAlpha(0.55f)`) arrayed cleanly along both sides of the recessed track.
-  - **Ultra-Thin Flush Slider Thumb**: A sleek, low-profile machined metal/glass touch bar (`width = 22px`, `height = 9px`, `cornerRadius = 2.0f`) with an upper-left specular edge and a thin `1px` glowing `crimsonBright` center indicator line.
+#### E. Low-Profile Vertical Touch / Ultra-Thin Mechanical Sliders & Right-Side Full-Height Mixer Bay (`drawLinearSlider`)
+- **Mandatory Right-Side Full-Height Placement (`Input`, `Wet/Dry Mix`, `Output`)**:
+  - The mixer sliders for **`Input`** (input gain in `dB`), **`Wet/Dry Mix`** (`0%–100%` blend), and **`Output`** (output level in `dB`) **must** be placed on the **right side of the component** inside a dedicated **Right-Side Mixer Bay** that spans the **full interior height** of the glass panel (from the top inner margin to the bottom inner margin).
+  - In `resized()`, always slice the Right-Side Mixer Bay off `innerGlass` **first** (`auto rightMixerBay = innerGlass.removeFromRight (204);`) before slicing the left/central workspace into the Top Header Pill-Shaped Digital Readout, Central Waveform Visualizer, and bottom/lower-deck Knurled Metal Knobs & Tactile Buttons.
+  - Separate the Right-Side Mixer Bay from the left/central workspace with a full-height vertical glass/crimson divider hairline (`obsidianGrid` + subtle `crimsonAccent.withAlpha(0.28f)` top-to-bottom accent line).
+  - Divide `rightMixerBay` into **three equal full-height vertical columns** (`Input`, `Mix` / `Wet/Dry`, `Output`). Each column stretches the full height of the component:
+    1. **Top Header Label (`22px`)**: Crisp tracked uppercase sans-serif title (`"INPUT"`, `"MIX"`, `"OUTPUT"`) in `textSecondary`.
+    2. **Full-Height Vertical Slider Track (Middle)**: A `juce::Slider::LinearVertical` control occupying the entire remaining vertical span between the top label and bottom readout (`height >= 540px` on a `720px` canvas).
+    3. **Bottom Live Value Readout (`24px`)**: Pill-recessed or clean tabular numeric readout (`"-0.0 dB"`, `"100 %"`, `"-0.0 dB"`) in `textPrimary`.
+- **Slider Visual Design**:
+  - **Recessed Linear Track**: A narrow (`4px` wide) full-height vertical recessed slot (`obsidianWell`) integrated smoothly into the glass surface with a `1px` glass edge highlight and a subtle muted crimson active fill (`crimsonAccent`) rising from the bottom to the thumb position.
+  - **Minimalist Tick Marks**: Hairline horizontal tick marks (`7px` major / `4px` minor, `1px` thick in `textMuted.withAlpha(0.55f)`) arrayed cleanly along both sides of the full-height recessed track.
+  - **Ultra-Thin Flush Slider Thumb**: A sleek, low-profile machined metal/glass touch bar (`width = 24px`, `height = 9px`, `cornerRadius = 2.0f`) with an upper-left specular edge and a thin `1.2px` glowing `crimsonBright` center indicator line.
 
 #### F. Low-Profile Rectangular Tactile Buttons (`drawToggleButton`)
 - **Design**: Rectangular, low-profile tactile buttons (`"Bypass"`, `"Filter"`, `"Comp"`, `"Limiter"`, `"M/S Mode"`, `"Link"`) flush-mounted in the glass surface with crisp, clean sans-serif typography:
@@ -239,7 +249,79 @@ namespace studio::ui
 
 ---
 
-## 5. Fixed Design Canvas & Resizable Scaling Pattern
+## 5. Fixed Design Canvas, Spatial Layout & Resizable Scaling Pattern
+
+### A. Spatial Layout Architecture (Main Workspace + Right-Side Full-Height Mixer Bay)
+
+Within the flush glass overlay (`innerGlass`), the layout is partitioned horizontally first so the **Right-Side Mixer Bay (`Input`, `Wet/Dry Mix`, `Output`) spans the full height of the component**:
+
+```text
++-----------------------------------------------------------------------------------+
+|  Brushed Gunmetal Chassis (#1D2026) + Flush Glass Overlay + Crimson Edge-Glow     |
+|  +--------------------------------------------------------+--------------------+  |
+|  |         [ <   PLUGIN // PRESET READOUT PILL   > ]      |  INPUT  MIX   OUT  |  |
+|  +--------------------------------------------------------+   | |   | |   | |  |  |
+|  |                                                        |   | |   | |   | |  |  |
+|  |       MAIN CENTRAL WAVEFORM VISUALIZER (#090A0D)       |   | |   | |   | |  |  |
+|  |     Glowing Crimson Real-Time Audio Waveform + dB Grid |  -===-  | |  -===- |  |
+|  |                                                        |   | |  -===-  | |  |  |
+|  +--------------------------------------------------------+   | |   | |   | |  |  |
+|  |    ( ( DRIVE ) )    ( ( TONE ) )     ( ( COMP/DECAY ) )|   | |   | |   | |  |  |
+|  |      Knurled          Knurled            Knurled       |   | |   | |   | |  |  |
+|  |                                                        |   | |   | |   | |  |  |
+|  |   [ BYPASS ]    [ FILTER ]    [ COMP ]    [ LIMITER ]  |  0.0dB  100%  0.0dB|  |
+|  +--------------------------------------------------------+--------------------+  |
+|  <------------- Left / Main Workspace -------------------> <- Full-Height ----->  |
+|                                                               Right Mixer Bay     |
++-----------------------------------------------------------------------------------+
+```
+
+### B. Reference `resized()` Implementation for the Full-Height Right-Side Mixer Bay
+
+```cpp
+// Inside the 1180x720 ContentComponent::resized():
+auto unitBounds  = getLocalBounds().reduced (18, 16);
+auto metalBase   = unitBounds.reduced (5);
+auto glassPanel  = metalBase.reduced (6);
+auto innerGlass  = glassPanel.reduced (18, 16);
+
+// 1. Carve out the Right-Side Mixer Bay FIRST so it spans the FULL HEIGHT of the component
+constexpr int mixerBayWidth = 204;
+auto rightMixerBay = innerGlass.removeFromRight (mixerBayWidth);
+innerGlass.removeFromRight (14); // Gap + vertical divider clearance
+
+// Lay out Input, Wet/Dry Mix, and Output full-height vertical sliders across rightMixerBay
+const int numMixerSliders = 3; // 0: Input, 1: Wet/Dry Mix, 2: Output
+const int colWidth = rightMixerBay.getWidth() / numMixerSliders;
+for (int i = 0; i < numMixerSliders; ++i)
+{
+    auto col = rightMixerBay.removeFromLeft (i == numMixerSliders - 1 ? rightMixerBay.getWidth() : colWidth)
+                            .reduced (4, 0);
+    auto titleArea = col.removeFromTop (22);
+    auto valueArea = col.removeFromBottom (24);
+    mixerTitleLabels[i]->setBounds (titleArea);
+    mixerValueLabels[i]->setBounds (valueArea);
+    mixerSliders[i]->setBounds (col); // Takes the full remaining vertical height!
+}
+
+// 2. Lay out the Left / Main Workspace (Top Pill Readout, Central Waveform, Knobs & Tactile Buttons)
+auto topHeaderRow = innerGlass.removeFromTop (38);
+headerPillBar.setBounds (topHeaderRow.withSizeKeepingCentre (360, 32));
+
+innerGlass.removeFromTop (12);
+auto bottomControlsArea = innerGlass.removeFromBottom (250);
+innerGlass.removeFromBottom (14);
+
+// Central Waveform Visualizer occupies the remaining middle expanse
+waveformDisplay.setBounds (innerGlass);
+
+// Bottom deck: Low-Profile Knurled Metal Knobs + Tactile Buttons row
+auto buttonRow = bottomControlsArea.removeFromBottom (42);
+bottomControlsArea.removeFromBottom (10);
+auto knobRow   = bottomControlsArea;
+```
+
+### C. Resizable Editor Scaling Pattern
 
 Always lay out `PluginEditor` in a fixed design coordinate system (`1180 x 720`) inside a child content component, and scale it smoothly in `AudioProcessorEditor::resized()`:
 
